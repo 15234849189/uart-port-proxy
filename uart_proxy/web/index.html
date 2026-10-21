@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UART Proxy</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">UART <span>Proxy</span></div>
+    <div id="srvStatus" class="srv off" title="服务器连接状态"><i></i><em>未连接</em></div>
+    <div class="grow"></div>
+    <button id="btnRecords" class="ghost">记录</button>
+    <button id="btnOpenPort" class="primary">+ 打开串口</button>
+  </header>
+
+  <nav id="tabbar"></nav>
+
+  <main id="main">
+    <section id="termPane">
+      <div id="termToolbar">
+        <div class="seg" id="segMode">
+          <button data-v="text" class="on">文本</button>
+          <button data-v="hex">HEX</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="ckTs" checked>时间戳</label>
+        <label class="chk">编码
+          <select id="selEnc">
+            <option value="utf-8">UTF-8</option>
+            <option value="gbk">GBK</option>
+            <option value="big5">Big5</option>
+            <option value="latin-1">Latin-1</option>
+          </select>
+        </label>
+        <span class="vline"></span>
+        <button id="btnDtr" class="chip" title="点击切换 DTR 电平">DTR</button>
+        <button id="btnRts" class="chip" title="点击切换 RTS 电平">RTS</button>
+        <span class="vline"></span>
+        <button id="btnPause" class="ghost">暂停</button>
+        <button id="btnClear" class="ghost">清屏</button>
+        <button id="btnRecord" class="ghost">录制</button>
+        <div class="grow"></div>
+        <div id="statLine" class="stat">RX 0 B · TX 0 B · 00:00:00</div>
+      </div>
+      <div id="termLog"></div>
+      <div id="sendBar">
+        <select id="sendMode">
+          <option value="text">文本</option>
+          <option value="hex">HEX</option>
+        </select>
+        <input id="sendInput" type="text" placeholder="输入内容，Enter 发送，↑↓ 切换历史" autocomplete="off">
+        <select id="sendNewline">
+          <option value="none">无行尾</option>
+          <option value="cr">\r</option>
+          <option value="lf">\n</option>
+          <option value="crlf">\r\n</option>
+        </select>
+        <button id="btnSend" class="primary">发送</button>
+      </div>
+    </section>
+
+    <aside id="sidebar">
+      <div class="side-tabs">
+        <button data-pane="commands" class="on">指令库</button>
+        <button data-pane="seqs">序列</button>
+        <button data-pane="scripts">脚本</button>
+      </div>
+      <div id="paneCommands" class="pane on">
+        <div class="pane-head">
+          <span>点击指令发送到当前标签页</span>
+          <button id="btnAddCmd" class="ghost small">+ 新增</button>
+        </div>
+        <div id="cmdList" class="item-list"></div>
+      </div>
+      <div id="paneSeqs" class="pane">
+        <div class="pane-head">
+          <span>按序发送 + 延时，服务端执行</span>
+          <button id="btnAddSeq" class="ghost small">+ 新增</button>
+        </div>
+        <div id="seqList" class="item-list"></div>
+      </div>
+      <div id="paneScripts" class="pane">
+        <div class="pane-head">
+          <span>Python 脚本（send/recv/sleep/log）</span>
+          <button id="btnAddScript" class="ghost small">+ 新建</button>
+        </div>
+        <div id="scriptList" class="item-list"></div>
+        <div id="scriptEditor">
+          <div class="ed-head">
+            <span id="edName">未选择</span>
+            <button id="btnScriptSave" class="ghost small">保存</button>
+          </div>
+          <textarea id="scriptCode" spellcheck="false" placeholder="选择或新建脚本后在此编辑"></textarea>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div id="emptyHint">
+    <div>
+      <h2>未打开任何串口</h2>
+      <p>点击右上角「打开串口」建立连接，或通过 MCP 让 AI 代为操作。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 打开串口 -->
+<div class="modal" id="dlgOpen">
+  <div class="box">
+    <h3>打开串口</h3>
+    <div class="grid2">
+      <label>端口
+        <div class="row">
+          <select id="opPort"></select>
+          <button id="opRefresh" class="ghost small">刷新</button>
+        </div>
+      </label>
+      <label>波特率
+        <input id="opBaud" list="baudList" value="115200">
+        <datalist id="baudList">
+          <option>9600</option><option>19200</option><option>38400</option>
+          <option>57600</option><option>115200</option><option>230400</option>
+          <option>460800</option><option>921600</option>
+        </datalist>
+      </label>
+      <label>数据位
+        <select id="opBytesize"><option value="8">8</option><option value="7">7</option></select>
+      </label>
+      <label>校验
+        <select id="opParity">
+          <option value="N">无 N</option><option value="E">偶 E</option>
+          <option value="O">奇 O</option><option value="M">M</option><option value="S">S</option>
+        </select>
+      </label>
+      <label>停止位
+        <select id="opStopbits"><option value="1">1</option><option value="2">2</option></select>
+      </label>
+      <label>流控
+        <select id="opFlow">
+          <option value="none">无</option><option value="rtscts">RTS/CTS</option>
+          <option value="xonxoff">XON/XOFF</option>
+        </select>
+      </label>
+      <label>编码
+        <select id="opEnc">
+          <option value="utf-8">UTF-8</option><option value="gbk">GBK</option>
+          <option value="big5">Big5</option><option value="latin-1">Latin-1</option>
+        </select>
+      </label>
+      <label>DTR / RTS 初始电平
+        <div class="row">
+          <label class="chk"><input type="checkbox" id="opDtr" checked>DTR</label>
+          <label class="chk"><input type="checkbox" id="opRts" checked>RTS</label>
+        </div>
+      </label>
+    </div>
+    <label class="chk"><input type="checkbox" id="opReconnect" checked>断线自动重连</label>
+    <div class="btns">
+      <button class="ghost" data-close>取消</button>
+      <button class="primary" id="opConfirm">连接</button>
+    </div>
+  </div>
+</div>
+
+<!-- 指令编辑 -->
+<div class="modal" id="dlgCmd">
+  <div class="box">
+    <h3 id="dlgCmdTitle">新增指令</h3>
+    <label>名称<input id="cmdName" placeholder="如：重启设备"></label>
+    <label>内容<textarea id="cmdData" rows="3" placeholder="文本或 HEX，如 01 03 00 00 00 0A"></textarea></label>
+    <div class="grid2">
+      <label>模式
+        <select id="cmdMode"><option value="text">文本</option><option value="hex">HEX</option></select>
+      </label>
+      <label>行尾
+        <select id="cmdNewline">
+          <option value="none">无</option><option value="cr">\r</option>
+          <option value="lf">\n</option><option value="crlf">\r\n</option>
+        </select>
+      </label>
+    </div>
+    <div class="btns">
+      <button class="ghost" data-close>取消</button>
+      <button class="primary" id="cmdSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 序列编辑 -->
+<div class="modal" id="dlgSeq">
+  <div class="box wide">
+    <h3 id="dlgSeqTitle">新增序列</h3>
+    <div class="row">
+      <label class="grow">名称<input id="seqName" placeholder="如：初始化流程"></label>
+      <label>循环次数<input id="seqLoops" type="number" min="0" value="1" title="0 = 无限循环"></label>
+    </div>
+    <div id="seqSteps"></div>
+    <button id="seqAddStep" class="ghost small">+ 添加步骤</button>
+    <div class="btns">
+      <button class="ghost" data-close>取消</button>
+      <button class="primary" id="seqSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 令牌 -->
+<div class="modal" id="dlgToken">
+  <div class="box">
+    <h3>需要访问令牌</h3>
+    <p class="muted">服务器启用了 --token，请输入访问令牌。</p>
+    <label>令牌<input id="tokenInput" type="password"></label>
+    <div class="btns"><button class="primary" id="tokenSave">确定</button></div>
+  </div>
+</div>
+
+<!-- 记录文件 -->
+<div class="modal" id="dlgRecords">
+  <div class="box wide">
+    <h3>收发记录</h3>
+    <p class="muted" id="recordsDir"></p>
+    <div id="recordList" class="item-list"></div>
+    <div class="btns"><button class="ghost" data-close>关闭</button></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

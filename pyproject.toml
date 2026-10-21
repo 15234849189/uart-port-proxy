@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uart-proxy"
+version = "0.1.0"
+description = "Cross-platform serial port proxy: Web terminal + MCP tools"
+requires-python = ">=3.7"
+dependencies = [
+    "flask>=2.2,<2.3",
+    "werkzeug>=2.2,<3",
+    "flask-sock>=0.5,<0.7",
+    "simple-websocket>=0.10",
+    "pyserial>=3.5",
+]
+
+[project.scripts]
+uart-proxy = "uart_proxy.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["uart_proxy*"]
+
+[tool.setuptools.package-data]
+uart_proxy = ["web/*", "examples/*"]

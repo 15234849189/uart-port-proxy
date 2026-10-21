@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+
+# 虚拟环境
+myvenv/
+venv/
+.venv/
+env/
+
+# 运行时数据
+logs/
+*.log
+
+# 配置（含令牌等敏感信息，按需本地保存）
+config.json
+
+# IDE / 编辑器
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# 测试 / 工具缓存
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
